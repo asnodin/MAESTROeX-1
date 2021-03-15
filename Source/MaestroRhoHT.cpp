@@ -79,6 +79,13 @@ void Maestro::TfromRhoH(Vector<MultiFab>& scal, const BaseState<Real>& p0) {
                     eos(eos_input_rh, eos_state);
 
                     state(i, j, k, Temp) = eos_state.T;
+                    if (correct_temp) {
+                        Real dpds = eos_state.dpdT / eos_state.dsdT;
+                        Real pref = state(i, j, k, Pi) /
+                                   (eos_state.p * eos_state.rho * eos_state.gam1);
+                        state(i, j, k, Temp) += pref * dpds;
+                    }
+
                 });
             }
         }
@@ -142,6 +149,13 @@ void Maestro::TfromRhoP(Vector<MultiFab>& scal, const BaseState<Real>& p0,
                 eos(eos_input_rp, eos_state);
 
                 state(i, j, k, Temp) = eos_state.T;
+                // thermodynamically consistent temperature
+                if (correct_temp) {
+                    Real dpds = eos_state.dpdT / eos_state.dsdT;
+                    Real pref = state(i, j, k, Pi) /
+                               (eos_state.p * eos_state.rho * eos_state.gam1);
+                    state(i, j, k, Temp) += pref * dpds;
+                }
 
                 if (updateRhoH) {
                     state(i, j, k, RhoH) = eos_state.rho * eos_state.h;

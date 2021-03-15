@@ -503,6 +503,11 @@ small_dens                          Real               1.e-5    y
 # $T=T(\rho,h,X)$.
 use_tfromp                          bool            false    y
 
+# When updating temperature, use thermodynamically consistent
+# T = T_{EOS} + \pi correction rather than just T = T_{EOS} obtained
+# using (\rho,h) or (\rho,p_0).
+correct_temp                         bool            false    y
+
 # In deriving the temperature from the $h$, first subtract off
 # $p_0/\rho$ to define $e$, and use that as the input to the EOS.
 use_eos_e_instead_of_h              bool            false    y
