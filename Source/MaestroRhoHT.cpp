@@ -4,7 +4,8 @@
 
 using namespace amrex;
 
-void Maestro::TfromRhoH(Vector<MultiFab>& scal, const BaseState<Real>& p0) {
+void Maestro::TfromRhoH(Vector<MultiFab>& scal, const BaseState<Real>& p0,
+                        const int var) {
     // timer for profiling
     BL_PROFILE_VAR("Maestro::TfromRhoH()", TfromRhoH);
 
@@ -54,7 +55,23 @@ void Maestro::TfromRhoH(Vector<MultiFab>& scal, const BaseState<Real>& p0) {
 
                     eos(eos_input_re, eos_state);
 
-                    state(i, j, k, Temp) = eos_state.T;
+                    // Update with the corrected or uncorrected temperature
+                    // (or their difference)
+                    if (var == TempU) {
+                        // uncorrected temperature
+                        state(i, j, k, Temp) = eos_state.T;
+                    } else {
+                        // corrected - uncorrected temperature
+                        Real dpds = eos_state.dpdT / eos_state.dsdT;
+                        Real pref = state(i, j, k, Pi) /
+                                   (eos_state.p * eos_state.rho * eos_state.gam1);
+                        state(i, j, k, Temp) = pref * dpds;
+                    }
+                    if (var == TempC) {
+                        // add the EoS temperature on to the correction
+                        state(i, j, k, Temp) += eos_state.T;
+                    }
+
                 });
             } else {
                 // (rho, h) --> T, p
@@ -73,12 +90,26 @@ void Maestro::TfromRhoH(Vector<MultiFab>& scal, const BaseState<Real>& p0) {
                             state(i, j, k, FirstAux + n) / eos_state.rho;
                     }
 #endif
-
                     eos_state.h = state(i, j, k, RhoH) / state(i, j, k, Rho);
 
                     eos(eos_input_rh, eos_state);
 
-                    state(i, j, k, Temp) = eos_state.T;
+                    // Update with the corrected or uncorrected temperature
+                    // (or their difference)
+                    if (var == TempU) {
+                        // uncorrected temperature
+                        state(i, j, k, Temp) = eos_state.T;
+                    } else {
+                        // corrected - uncorrected temperature
+                        Real dpds = eos_state.dpdT / eos_state.dsdT;
+                        Real pref = state(i, j, k, Pi) /
+                                   (eos_state.p * eos_state.rho * eos_state.gam1);
+                        state(i, j, k, Temp) = pref * dpds;
+                    }
+                    if (var == TempC) {
+                        // add the EoS temperature on to the correction
+                        state(i, j, k, Temp) += eos_state.T;
+                    }
                 });
             }
         }
@@ -90,7 +121,7 @@ void Maestro::TfromRhoH(Vector<MultiFab>& scal, const BaseState<Real>& p0) {
 }
 
 void Maestro::TfromRhoP(Vector<MultiFab>& scal, const BaseState<Real>& p0,
-                        const bool updateRhoH) {
+                        const bool updateRhoH, const int var) {
     // timer for profiling
     BL_PROFILE_VAR("Maestro::TfromRhoP()", TfromRhoP);
 
@@ -141,7 +172,22 @@ void Maestro::TfromRhoP(Vector<MultiFab>& scal, const BaseState<Real>& p0,
 
                 eos(eos_input_rp, eos_state);
 
-                state(i, j, k, Temp) = eos_state.T;
+                // Update with the corrected or uncorrected temperature
+                // (or their difference)
+                if (var == TempU) {
+                    // uncorrected temperature
+                    state(i, j, k, Temp) = eos_state.T;
+                } else {
+                    // corrected - uncorrected temperature
+                    Real dpds = eos_state.dpdT / eos_state.dsdT;
+                    Real pref = state(i, j, k, Pi) /
+                               (eos_state.p * eos_state.rho * eos_state.gam1);
+                    state(i, j, k, Temp) = pref * dpds;
+                }
+                if (var == TempC) {
+                    // add the EoS temperature on to the correction
+                    state(i, j, k, Temp) += eos_state.T;
+                }
 
                 if (updateRhoH) {
                     state(i, j, k, RhoH) = eos_state.rho * eos_state.h;

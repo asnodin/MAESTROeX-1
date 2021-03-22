@@ -125,6 +125,49 @@ void Maestro::MakeExplicitThermal(
             MultiFab::Add(thermal[lev], resid[lev], 0, 0, 1, 0);
         }
     }  // end if
+
+    // add a temperature correction
+    if (correct_temp) {
+
+        mlabec.setScalars(0.0, 1.0);
+
+
+        // store correction = T_correct - T_eos in the temperature variable
+        if (use_tfromp) {
+            TfromRhoP(scal, p0, var = TempCminusU);
+        } else {
+            TfromRhoH(scal, p0, var = TempCminusU);
+        }
+
+        // set value of phi
+        for (int lev = 0; lev <= finest_level; ++lev) {
+            MultiFab::Copy(phi[lev], scal[lev], Temp, 0, 1, 1);
+        }
+
+        ApplyThermal(mlabec, resid, Tcoeff, phi, bcs_s, RhoH);
+
+        // Add correction and divide everything by the corrected temperature
+        for (int lev = 0; lev <= finest_level; ++lev) {
+            for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+                MultiFab::Add(thermal[lev], resid[lev], 0, 0, 1, 0);
+                MultiFab::Divide(thermal[lev], scal[lev], Temp, 0, 1, 1);
+            }
+        }
+
+        // put uncorrected T back into the temperature variable
+        if (use_tfromp) {
+            TfromRhoP(scal, p0, var = TempU);
+        } else {
+            TfromRhoH(scal, p0, var = TempU);
+        }
+
+        // Finally, multiply by the uncorrected temperature.
+        for (int lev = 0; lev <= finest_level; ++lev) {
+            for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+                MultiFab::Multiply(thermal[lev], scal[lev], Temp, 0, 1, 1);
+            }
+        }
+    }
 }
 
 // compute only the h term in thermal

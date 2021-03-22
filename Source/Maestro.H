@@ -1510,7 +1510,8 @@ class Maestro : public amrex::AmrCore {
     /// @param scal     scalars
     /// @param p0       base state pressure
     void TfromRhoH(amrex::Vector<amrex::MultiFab>& scal,
-                   const BaseState<amrex::Real>& p0);
+                   const BaseState<amrex::Real>& p0,
+                   const int var = 0;
 
     /// Calculate the temperature given the density and the pressure
     ///
@@ -1518,7 +1519,8 @@ class Maestro : public amrex::AmrCore {
     /// @param p0       base state pressure
     void TfromRhoP(amrex::Vector<amrex::MultiFab>& scal,
                    const BaseState<amrex::Real>& p0,
-                   const bool updateRhoH = false);
+                   const bool updateRhoH = false,
+                   const int var = 0);
 
     /// Calculate the pressure given the density and the enthalpy
     ///
@@ -2068,6 +2070,13 @@ class Maestro : public amrex::AmrCore {
     /// and p0 in the case of a closed upper boundary (planar).
     Real p0bdot;
     Real p0b;
+
+    /// flag for selecting what to update in the temperature slot
+    enum temp_update_flag {
+        TempU          =        0,
+        TempC          = -8999998,
+        TempCminusU    = -8999997
+    };
 
     /// flag for writing plotfiles
     enum plotfile_flag {
