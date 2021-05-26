@@ -78,10 +78,12 @@ void Maestro::MakeNewLevelFromScratch(int lev, Real time, const BoxArray& ba,
     sold[lev].define(ba, dm, Nscal, ng_s);
     snew[lev].define(ba, dm, Nscal, ng_s);
     S_cc_old[lev].define(ba, dm, 1, 0);
+    TempC[lev].define(ba, dm, 1, 1);
 
     sold[lev].setVal(0.);
     snew[lev].setVal(0.);
     S_cc_old[lev].setVal(0.);
+    TempC[lev].setVal(0.);
 
     const auto prob_lo = geom[lev].ProbLoArray();
     const auto dx = geom[lev].CellSizeArray();

@@ -118,8 +118,8 @@ void Maestro::Evolve() {
 
             // diffuse the enthalpy
             Print() << "... conducting" << std::endl;
-            ThermalConduct(sold, snew, hcoeff1, Xkcoeff1, pcoeff1, hcoeff2,
-                           Xkcoeff2, pcoeff2);
+            ThermalConduct(sold, snew, hcoeff1, Xkcoeff1, pcoeff1, Tcoeff1, hcoeff2,
+                           Xkcoeff2, pcoeff2, Tcoeff2);
 
             // now update temperature
             TfromRhoH(snew, p0_new);

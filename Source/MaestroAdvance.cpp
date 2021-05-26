@@ -50,7 +50,8 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     Vector<MultiFab> delta_gamma1(finest_level + 1);
     Vector<MultiFab> p0_cart(finest_level + 1);
     Vector<MultiFab> delta_p_term(finest_level + 1);
-    Vector<MultiFab> Tcoeff(finest_level + 1);
+    Vector<MultiFab> Tcoeff1(finest_level + 1);
+    Vector<MultiFab> Tcoeff2(finest_level + 1);
     Vector<MultiFab> hcoeff1(finest_level + 1);
     Vector<MultiFab> Xkcoeff1(finest_level + 1);
     Vector<MultiFab> pcoeff1(finest_level + 1);
@@ -141,7 +142,8 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
         delta_gamma1[lev].define(grids[lev], dmap[lev], 1, 0);
         delta_p_term[lev].define(grids[lev], dmap[lev], 1, 0);
         p0_cart[lev].define(grids[lev], dmap[lev], 1, 0);
-        Tcoeff[lev].define(grids[lev], dmap[lev], 1, 1);
+        Tcoeff1[lev].define(grids[lev], dmap[lev], 1, 1);
+        Tcoeff2[lev].define(grids[lev], dmap[lev], 1, 1);
         hcoeff1[lev].define(grids[lev], dmap[lev], 1, 1);
         Xkcoeff1[lev].define(grids[lev], dmap[lev], NumSpec, 1);
         pcoeff1[lev].define(grids[lev], dmap[lev], 1, 1);
@@ -418,9 +420,9 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
 
     // thermal is the forcing for rhoh or temperature
     if (use_thermal_diffusion) {
-        MakeThermalCoeffs(s1, Tcoeff, hcoeff1, Xkcoeff1, pcoeff1);
+        MakeThermalCoeffs(s1, Tcoeff1, hcoeff1, Xkcoeff1, pcoeff1);
 
-        MakeExplicitThermal(thermal1, s1, Tcoeff, hcoeff1, Xkcoeff1, pcoeff1,
+        MakeExplicitThermal(thermal1, s1, Tcoeff1, hcoeff1, Xkcoeff1, pcoeff1,
                             p0_old, temp_diffusion_formulation);
     } else {
         for (int lev = 0; lev <= finest_level; ++lev) {
@@ -563,8 +565,8 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     }
 
     if (use_thermal_diffusion) {
-        ThermalConduct(s1, s2, hcoeff1, Xkcoeff1, pcoeff1, hcoeff1, Xkcoeff1,
-                       pcoeff1);
+        ThermalConduct(s1, s2, hcoeff1, Xkcoeff1, pcoeff1, Tcoeff1,
+                               hcoeff1, Xkcoeff1, pcoeff1, Tcoeff1);
     }
 
     thermal_time += ParallelDescriptor::second() - thermal_time_start;
@@ -668,9 +670,9 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     }
 
     if (use_thermal_diffusion) {
-        MakeThermalCoeffs(snew, Tcoeff, hcoeff2, Xkcoeff2, pcoeff2);
+        MakeThermalCoeffs(snew, Tcoeff2, hcoeff2, Xkcoeff2, pcoeff2);
 
-        MakeExplicitThermal(thermal2, snew, Tcoeff, hcoeff2, Xkcoeff2, pcoeff2,
+        MakeExplicitThermal(thermal2, snew, Tcoeff2, hcoeff2, Xkcoeff2, pcoeff2,
                             p0_new, temp_diffusion_formulation);
     } else {
         for (int lev = 0; lev <= finest_level; ++lev) {
@@ -953,10 +955,10 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     }
 
     if (use_thermal_diffusion) {
-        MakeThermalCoeffs(s2star, Tcoeff, hcoeff2, Xkcoeff2, pcoeff2);
+        MakeThermalCoeffs(s2star, Tcoeff2, hcoeff2, Xkcoeff2, pcoeff2);
 
-        ThermalConduct(s1, s2, hcoeff1, Xkcoeff1, pcoeff1, hcoeff2, Xkcoeff2,
-                       pcoeff2);
+        ThermalConduct(s1, s2, hcoeff1, Xkcoeff1, pcoeff1, Tcoeff1,
+                               hcoeff2, Xkcoeff2, pcoeff2, Tcoeff2);
     }
 
     thermal_time += ParallelDescriptor::second() - thermal_time_start;
@@ -1042,9 +1044,9 @@ void Maestro::AdvanceTimeStep(bool is_initIter) {
     }
 
     if (use_thermal_diffusion) {
-        MakeThermalCoeffs(snew, Tcoeff, hcoeff2, Xkcoeff2, pcoeff2);
+        MakeThermalCoeffs(snew, Tcoeff2, hcoeff2, Xkcoeff2, pcoeff2);
 
-        MakeExplicitThermal(thermal2, snew, Tcoeff, hcoeff2, Xkcoeff2, pcoeff2,
+        MakeExplicitThermal(thermal2, snew, Tcoeff2, hcoeff2, Xkcoeff2, pcoeff2,
                             p0_new, temp_diffusion_formulation);
     }
 

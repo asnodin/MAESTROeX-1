@@ -1687,9 +1687,11 @@ class Maestro : public amrex::AmrCore {
                         const amrex::Vector<amrex::MultiFab>& hcoeff1,
                         const amrex::Vector<amrex::MultiFab>& Xkcoeff1,
                         const amrex::Vector<amrex::MultiFab>& pcoeff1,
+                        const amrex::Vector<amrex::MultiFab>& Tcoeff1,
                         const amrex::Vector<amrex::MultiFab>& hcoeff2,
                         const amrex::Vector<amrex::MultiFab>& Xkcoeff2,
-                        const amrex::Vector<amrex::MultiFab>& pcoeff2);
+                        const amrex::Vector<amrex::MultiFab>& pcoeff2,
+                        const amrex::Vector<amrex::MultiFab>& Tcoeff2);
 
     void ThermalConductSDC(int which_step,
                            const amrex::Vector<amrex::MultiFab>& s_old,
@@ -1945,6 +1947,10 @@ class Maestro : public amrex::AmrCore {
     /// since we project `(beta0^nph S^1 - beta0 S^0) / dt`
     /// during a regular time step we overwrite this
     amrex::Vector<amrex::MultiFab> rhcc_for_nodalproj;
+
+    // this stores the thermodynamically consistent temperature
+    // that is updated together with the EOS temperature
+    amrex::Vector<amrex::MultiFab> TempC;
 
     /// spherical only -
     /// we make this persistent in that we only have to rebuild and

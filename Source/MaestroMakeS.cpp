@@ -110,6 +110,7 @@ void Maestro::Make_S_cc(
                 delta_gamma1_term[lev].array(mfi);
             const Array4<Real> delta_gamma1_arr = delta_gamma1[lev].array(mfi);
             const Array4<const Real> scal_arr = scal[lev].array(mfi);
+            const Array4<const Real> TempC_arr = TempC[lev].array(mfi);
             const Array4<const Real> rho_odot_arr =
                 rho_omegadot[lev].array(mfi);
             const Array4<const Real> rho_Hnuc_arr = rho_Hnuc[lev].array(mfi);
@@ -166,10 +167,16 @@ void Maestro::Make_S_cc(
                         }
                     }
 
+                    // temperature correction (not implemented for reactions)
+                    Real sfac = 1.0;
+                    if (use_correct_temp) {
+                        sfac = scal_arr(i, j, k, Temp) / TempC_arr(i, j, k);
+                    }
+
                     S_cc_arr(i, j, k) =
                         (sigma / eos_state.rho) *
-                            (rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
-                             thermal_arr(i, j, k)) +
+                            (sfac * rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
+                             sfac * thermal_arr(i, j, k)) +
                         sigma * xi_term +
                         pres_term / (eos_state.rho * eos_state.dpdr);
 
@@ -239,10 +246,16 @@ void Maestro::Make_S_cc(
                         }
                     }
 
+                    // temperature correction (not implemented for reactions)
+                    Real sfac = 1.0;
+                    if (use_correct_temp) {
+                        sfac = scal_arr(i, j, k, Temp) / TempC_arr(i, j, k);
+                    }
+
                     S_cc_arr(i, j, k) =
                         (sigma / eos_state.rho) *
-                            (rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
-                             thermal_arr(i, j, k)) +
+                            (sfac * rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
+                             sfac * thermal_arr(i, j, k)) +
                         sigma * xi_term +
                         pres_term / (eos_state.rho * eos_state.dpdr);
 

@@ -59,10 +59,15 @@ void Maestro::MakeExplicitThermal(
         mlabec.setScalars(0.0, 1.0);
 
         // set value of phi
-        for (int lev = 0; lev <= finest_level; ++lev) {
-            MultiFab::Copy(phi[lev], scal[lev], Temp, 0, 1, 1);
+        if (use_correct_temp) {
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                MultiFab::Copy(phi[lev], TempC[lev], 0, 0, 1, 1);
+            }
+        } else {
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                MultiFab::Copy(phi[lev], scal[lev], Temp, 0, 1, 1);
+            }
         }
-
         ApplyThermal(mlabec, resid, Tcoeff, phi, bcs_s, RhoH);
 
         for (int lev = 0; lev <= finest_level; ++lev) {
@@ -85,6 +90,23 @@ void Maestro::MakeExplicitThermal(
 
         for (int lev = 0; lev <= finest_level; ++lev) {
             MultiFab::Add(thermal[lev], resid[lev], 0, 0, 1, 0);
+        }
+
+        // add a temperature correction div Tcoeff grad(T - T_eos), where T is the
+        // thermodynamically consistent temperature
+        if (use_correct_temp) {
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                MultiFab::Copy(phi[lev], TempC[lev], 0, 0, 1, 1);
+                MultiFab::Subtract(phi[lev], scal[lev], Temp, 0, 1, 1);
+            }
+
+            ApplyThermal(mlabec, resid, Tcoeff, phi, bcs_s, RhoH);
+
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+                    MultiFab::Add(thermal[lev], resid[lev], 0, 0, 1, 0);
+                }
+            }
         }
 
         // 2. Compute div Xkcoeff grad Xk
@@ -295,6 +317,7 @@ void Maestro::MakeThermalCoeffs(const Vector<MultiFab>& scal,
             const Array4<Real> pcoeff_arr = pcoeff[lev].array(mfi);
             const Array4<Real> Xkcoeff_arr = Xkcoeff[lev].array(mfi);
             const Array4<const Real> scal_arr = scal[lev].array(mfi);
+            const Array4<const Real> TempC_arr = TempC[lev].array(mfi);
 
             ParallelFor(gtbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
                 if (limit_conductivity_l &&
@@ -323,6 +346,10 @@ void Maestro::MakeThermalCoeffs(const Vector<MultiFab>& scal,
 
                     // dens, temp and xmass are inputs
                     eos(eos_input_rt, eos_state);
+
+                    // here it is assumed that conductivity does not use the EOS
+                    if (use_correct_temp) eos_state.T = TempC_arr(i, j, k);
+
                     conductivity(eos_state);
 
                     Tcoeff_arr(i, j, k) = -eos_state.conductivity;
@@ -334,6 +361,9 @@ void Maestro::MakeThermalCoeffs(const Vector<MultiFab>& scal,
                              (1.0 -
                               eos_state.p / (eos_state.rho * eos_state.dpdr)) +
                          eos_state.dedr / eos_state.dpdr);
+
+                    // revert back to EOS T
+                    if (use_correct_temp) eos_state.T = scal_arr(i, j, k, Temp);
 
                     const auto eos_xderivs = composition_derivatives(eos_state);
 
@@ -357,13 +387,16 @@ void Maestro::ThermalConduct(const Vector<MultiFab>& s1, Vector<MultiFab>& s2,
                              const Vector<MultiFab>& hcoeff1,
                              const Vector<MultiFab>& Xkcoeff1,
                              const Vector<MultiFab>& pcoeff1,
+                             const Vector<MultiFab>& Tcoeff1,
                              const Vector<MultiFab>& hcoeff2,
                              const Vector<MultiFab>& Xkcoeff2,
-                             const Vector<MultiFab>& pcoeff2) {
+                             const Vector<MultiFab>& pcoeff2,
+                             const Vector<MultiFab>& Tcoeff2
+) {
     // timer for profiling
     BL_PROFILE_VAR("Maestro::ThermalConduct()", ThermalConduct);
 
-    // Dummy coefficient matrix, holds all zeros
+    // Dummy coefficient matrix, holds all zeros, or
     Vector<MultiFab> Dcoeff(finest_level + 1);
     for (int lev = 0; lev <= finest_level; ++lev) {
         Dcoeff[lev].define(grids[lev], dmap[lev], 1, 1);
@@ -387,7 +420,8 @@ void Maestro::ThermalConduct(const Vector<MultiFab>& s1, Vector<MultiFab>& s2,
     }
 
     // compute resid = div(hcoeff1 grad h^1) - sum_k div(Xkcoeff1 grad Xk^1) - div(pcoeff1 grad p0_old)
-    MakeExplicitThermal(resid, s1, Dcoeff, hcoeff1, Xkcoeff1, pcoeff1, p0_old,
+    // Tcoeff1 is for the temperature correction (if enabled)
+    MakeExplicitThermal(resid, s1, Tcoeff1, hcoeff1, Xkcoeff1, pcoeff1, p0_old,
                         2);
 
     // RHS = solverrhs + dt/2 * resid1
@@ -397,7 +431,8 @@ void Maestro::ThermalConduct(const Vector<MultiFab>& s1, Vector<MultiFab>& s2,
     }
 
     // compute resid = 0 - sum_k div(Xkcoeff2 grad Xk^2) - div(pcoeff2 grad p0_new)
-    MakeExplicitThermal(resid, s2, Dcoeff, Dcoeff, Xkcoeff2, pcoeff2, p0_new,
+    // Tcoeff2 is for the temperature correction (if enabled)
+    MakeExplicitThermal(resid, s2, Tcoeff2, Dcoeff, Xkcoeff2, pcoeff2, p0_new,
                         2);
 
     // RHS = solverrhs + dt/2 * resid2
