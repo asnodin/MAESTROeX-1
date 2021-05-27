@@ -174,11 +174,11 @@ void Maestro::Make_S_cc(
                     }
 
                     S_cc_arr(i, j, k) =
-                        (sigma / eos_state.rho) *
-                            (sfac * rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
-                             sfac * thermal_arr(i, j, k)) +
-                        sigma * xi_term +
-                        pres_term / (eos_state.rho * eos_state.dpdr);
+                        (sigma / eos_state.rho) * sfac *
+                            (rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
+                             thermal_arr(i, j, k)) +
+                        sfac * sigma * xi_term +
+                        sfac * pres_term / (eos_state.rho * eos_state.dpdr);
 
                     if (use_delta_gamma1_term_loc) {
                         delta_gamma1_arr(i, j, k) =
@@ -253,11 +253,11 @@ void Maestro::Make_S_cc(
                     }
 
                     S_cc_arr(i, j, k) =
-                        (sigma / eos_state.rho) *
-                            (sfac * rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
-                             sfac * thermal_arr(i, j, k)) +
-                        sigma * xi_term +
-                        pres_term / (eos_state.rho * eos_state.dpdr);
+                        (sigma / eos_state.rho) * sfac *
+                            (rho_Hext_arr(i, j, k) + rho_Hnuc_arr(i, j, k) +
+                             thermal_arr(i, j, k)) +
+                        sfac * sigma * xi_term +
+                        sfac * pres_term / (eos_state.rho * eos_state.dpdr);
 
                     int r = AMREX_SPACEDIM == 2 ? j : k;
 

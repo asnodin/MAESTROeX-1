@@ -403,10 +403,13 @@ void Maestro::ThermalConduct(const Vector<MultiFab>& s1, Vector<MultiFab>& s2,
         Dcoeff[lev].setVal(0.);
     }
 
-    // solverrhs will hold solver RHS = (rho h)^2  +
+    // solverrhs will hold solver RHS = Tfac . (rho h)^2  +
     //           dt/2 div . ( hcoeff1 grad h^1) -
     //           dt/2 sum_k div . (Xkcoeff2 grad X_k^2 + Xkcoeff1 grad X_k^1) -
-    //           dt/2 div . ( pcoeff2 grad p_0^new + pcoeff1 grad p_0^old)
+    //           dt/2 div . ( pcoeff2 grad p_0^new + pcoeff1 grad p_0^old) +
+    //           dt/2 div . ( Tcoeff2 grad dT^new + Tcoeff1 grad dT^old)
+    // where dT = T - T_eos is the temperature correction (dT = 0 if not used)
+    // and Tfac = T / T_eos if correcting T, or Tfac = 1, otherwise
     Vector<MultiFab> solverrhs(finest_level + 1);
     Vector<MultiFab> resid(finest_level + 1);
     for (int lev = 0; lev <= finest_level; ++lev) {
@@ -418,8 +421,16 @@ void Maestro::ThermalConduct(const Vector<MultiFab>& s1, Vector<MultiFab>& s2,
     for (int lev = 0; lev <= finest_level; ++lev) {
         MultiFab::Copy(solverrhs[lev], s2[lev], RhoH, 0, 1, 0);
     }
+    if (use_correct_temp) {
+        // multiply by T/T_eos
+        for (int lev = 0; lev <= finest_level; ++lev) {
+           MultiFab::Multiply(solverrhs[lev], TempC, 0, 0, 1, 0);
+           MultiFab::Divide(solverrhs[lev], s2[lev], Temp, 0, 1, 0);
+        }
+    }
 
-    // compute resid = div(hcoeff1 grad h^1) - sum_k div(Xkcoeff1 grad Xk^1) - div(pcoeff1 grad p0_old)
+    // compute resid = div(hcoeff1 grad h^1)    - sum_k div(Xkcoeff1 grad Xk^1)
+    //               - div(pcoeff1 grad p0^old) + div(Tcoeff1 grad dT^old)
     // Tcoeff1 is for the temperature correction (if enabled)
     MakeExplicitThermal(resid, s1, Tcoeff1, hcoeff1, Xkcoeff1, pcoeff1, p0_old,
                         2);
@@ -460,6 +471,13 @@ void Maestro::ThermalConduct(const Vector<MultiFab>& s1, Vector<MultiFab>& s2,
     // set cell-centered A coefficient to \rho^{(2),*} or \rho^{(2)}
     for (int lev = 0; lev <= finest_level; ++lev) {
         MultiFab::Copy(acoef[lev], s2[lev], Rho, 0, 1, 1);
+    }
+    if (use_correct_temp) {
+        // multiply by T/T_eos
+        for (int lev = 0; lev <= finest_level; ++lev) {
+           MultiFab::Multiply(acoef[lev], TempC, 0, 0, 1, 0);
+           MultiFab::Divide(acoef[lev], s2[lev], Temp, 0, 1, 0);
+        }
     }
 
     // average face-centered Bcoefficients
