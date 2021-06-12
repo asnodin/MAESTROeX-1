@@ -939,6 +939,14 @@ void Maestro::AdvanceTimeStepAverage(bool is_initIter) {
     const Real start_total_nodalproj = ParallelDescriptor::second();
 
     // call nodal projection
+    // if updating the lambdabar term iteratively, call the nodal projection
+    // to update only that term in unew, before making a final update
+    if (use_lambdabar_term && lambda_update_method >= 2) {
+        for (int iter = 1; iter < lambda_update_method; ++iter) {
+        // extra interations of the lambdabar term
+            NodalProj(proj_type, rhcc_for_nodalproj, is_predictor = true);
+        }
+    }
     NodalProj(proj_type, rhcc_for_nodalproj);
 
     // wallclock time
