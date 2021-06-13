@@ -153,6 +153,14 @@ chk_deltat                          Real           -1.0
 # NOT IMPLEMENTED YET
 plot_h_with_use_tfromp              bool            true
 
+# plot thermodynamically consistent temperature based on
+# tfromp
+plot_tfrompC                        bool            false
+
+# plot thermodynamically consistent temperature based on
+# tfromh
+plot_tfromhC                        bool            false
+
 # plot species and omegadot in plotfile
 plot_spec                           bool            true
 
@@ -461,6 +469,10 @@ lambda_update_method                int             0           y
 # Enforce zero average of the lambdabar term in the nodal projection
 # (required for a closed box with the current nodal projection).
 zero_average_lambda                 bool            false       y
+
+# Use the thermodynamically consistent temperature in "externally facing"
+# quantities, e.g. thermal diffusion and external heating.
+use_correct_temp                    bool            false       y
 
 #-----------------------------------------------------------------------------
 # category: thermal diffusion
