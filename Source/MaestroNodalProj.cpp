@@ -409,24 +409,24 @@ void Maestro::NodalProj(int proj_type, Vector<MultiFab>& rhcc,
             pi[lev].mult(1. / dt);
         }
     } else {
-    if (proj_type == initial_projection_comp || proj_type == divu_iters_comp) {
-        for (int lev = 0; lev <= finest_level; ++lev) {
-            pi[lev].setVal(0.);
-            gpi[lev].setVal(0.);
+        if (proj_type == initial_projection_comp || proj_type == divu_iters_comp) {
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                pi[lev].setVal(0.);
+                gpi[lev].setVal(0.);
+            }
+        } else if (proj_type == pressure_iters_comp) {
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                MultiFab::Add(pi[lev], phi[lev], 0, 0, 1, 0);
+                MultiFab::Add(gpi[lev], gphi[lev], 0, 0, AMREX_SPACEDIM, 0);
+            }
+        } else if (proj_type == regular_timestep_comp) {
+            for (int lev = 0; lev <= finest_level; ++lev) {
+                MultiFab::Copy(pi[lev], phi[lev], 0, 0, 1, 0);
+                MultiFab::Copy(gpi[lev], gphi[lev], 0, 0, AMREX_SPACEDIM, 0);
+                pi[lev].mult(1. / dt);
+                gpi[lev].mult(1. / dt);
+            }
         }
-    } else if (proj_type == pressure_iters_comp) {
-        for (int lev = 0; lev <= finest_level; ++lev) {
-            MultiFab::Add(pi[lev], phi[lev], 0, 0, 1, 0);
-            MultiFab::Add(gpi[lev], gphi[lev], 0, 0, AMREX_SPACEDIM, 0);
-        }
-    } else if (proj_type == regular_timestep_comp) {
-        for (int lev = 0; lev <= finest_level; ++lev) {
-            MultiFab::Copy(pi[lev], phi[lev], 0, 0, 1, 0);
-            MultiFab::Copy(gpi[lev], gphi[lev], 0, 0, AMREX_SPACEDIM, 0);
-            pi[lev].mult(1. / dt);
-            gpi[lev].mult(1. / dt);
-        }
-    }
     }
 
     // update pi, lambdabar
@@ -436,7 +436,7 @@ void Maestro::NodalProj(int proj_type, Vector<MultiFab>& rhcc,
         // only update the dt*grav*lambdabar term in unew when performing an
         // interative update
         if (is_predictor && use_lambdabar_term && !spherical &&
-            lambdabar_update_method >= 2) {
+            lambda_update_method >= 2) {
             Vector<MultiFab> grav_cart(finest_level + 1);
             Vector<MultiFab> lambdabar_cart(finest_level + 1);
             for (int lev = 0; lev <= finest_level; ++lev) {
@@ -851,9 +851,9 @@ void Maestro::MakePiCC(const Vector<MultiFab>& beta0_cart) {
                     0.25 * (pi_arr(i, j, k) + pi_arr(i + 1, j, k) +
                             pi_arr(i, j + 1, k) + pi_arr(i + 1, j + 1, k));
 #else
-                pi_cc(i,j,k) = 0.125 * (pi_arr(i,j,k) + pi_arr(i+1,j,k) 
-                    + pi_arr(i,j+1,k) + pi_arr(i,j,k+1) 
-                    + pi_arr(i+1,j+1,k) + pi_arr(i+1,j,k+1) 
+                pi_cc(i,j,k) = 0.125 * (pi_arr(i,j,k) + pi_arr(i+1,j,k)
+                    + pi_arr(i,j+1,k) + pi_arr(i,j,k+1)
+                    + pi_arr(i+1,j+1,k) + pi_arr(i+1,j,k+1)
                     + pi_arr(i,j+1,k+1) + pi_arr(i+1,j+1,k+1));
 #endif
                 if (use_alt_energy_fix_loc) {
